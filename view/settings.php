@@ -125,6 +125,21 @@ $selected_bucket_prefix = $this->get_object_prefix(); ?>
 					</td>
 				</tr>
 
+				<?php $args = $this->get_setting_args( 'use-yearmonthday-folders' ); ?>
+				<tr class="configure-url url-preview <?php echo $args['tr_class']; ?>">
+					<td>
+						<?php $this->render_view( 'checkbox', $args ); ?>
+					</td>
+					<td>
+						<?php echo $args['setting_msg']; ?>
+						<h4><?php _e( 'Year/Month/Day', 'amazon-s3-and-cloudfront' ) ?></h4>
+						<p>
+							<?php _e( 'Add the Year/Month/Day in the URL.', 'amazon-s3-and-cloudfront' ); ?>
+							<?php echo $this->settings_more_info_link( 'use-yearmonthday-folders' ); ?>
+						</p>
+					</td>
+				</tr>
+
 				<?php $args = $this->get_setting_args( 'force-https' ); ?>
 				<tr class="configure-url as3cf-border-bottom url-preview <?php echo $args['tr_class']; ?>">
 					<td>

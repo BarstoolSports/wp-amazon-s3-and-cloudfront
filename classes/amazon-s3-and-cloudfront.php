@@ -281,6 +281,11 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 		}
 
 		// Default use year and month folders
+		if ( 'use-yearmonthday-folders' == $key && ! isset( $settings['use-yearmonthday-folders'] ) ) {
+			return get_option( 'uploads_use_yearmonthday_folders' );
+		}
+
+		// Default use year and month folders
 		if ( 'use-yearmonth-folders' == $key && ! isset( $settings['use-yearmonth-folders'] ) ) {
 			return get_option( 'uploads_use_yearmonth_folders' );
 		}
@@ -932,7 +937,7 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 				$time = $this->get_folder_time_from_url( $data['file'] );
 			} else {
 				$time = $this->get_attachment_folder_time( $post_id );
-				$time = date( 'Y/m', $time );
+				$time = date( 'Y/m/d', $time );
 			}
 
 			$prefix = $this->get_file_prefix( $time );
@@ -1216,7 +1221,9 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 	 * @return string
 	 */
 	function get_object_version_string() {
-		if ( $this->get_setting( 'use-yearmonth-folders' ) ) {
+		if ( $this->get_setting( 'use-yearmonthday-folders' ) ) {
+			return;
+		} else if ( $this->get_setting( 'use-yearmonth-folders' ) ) {
 			$date_format = 'dHis';
 		} else {
 			$date_format = 'YmdHis';
@@ -1239,7 +1246,7 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 	 * @return null|string
 	 */
 	function get_folder_time_from_url( $url ) {
-		preg_match( '@[0-9]{4}/[0-9]{2}@', $url, $matches );
+		preg_match( '@[0-9]{4}/[0-9]{2}/[0-9]{2}@', $url, $matches );
 
 		if ( isset( $matches[0] ) ) {
 			return $matches[0];
@@ -2722,6 +2729,7 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 			'force-https',
 			'object-versioning',
 			'use-yearmonth-folders',
+			'use-yearmonthday-folders',
 			'enable-object-prefix',
 		);
 	}
@@ -2913,7 +2921,10 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 			}
 		}
 
-		if ( $this->get_setting( 'use-yearmonth-folders' ) ) {
+		if ( $this->get_setting( 'use-yearmonthday-folders' ) ) {
+			$subdir = $this->get_year_month_day_directory_name( $time );
+			$prefix .= $subdir;
+		} else if ( $this->get_setting( 'use-yearmonth-folders' ) ) {
 			$subdir = $this->get_year_month_directory_name( $time );
 			$prefix .= $subdir;
 		}
@@ -2949,6 +2960,35 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 		$y      = substr( $time, 0, 4 );
 		$m      = substr( $time, 5, 2 );
 		$subdir = "/$y/$m";
+
+		if ( false === strpos( $subdir, '//' ) ) {
+			return $subdir;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Generate the year, month, and day sub-directory from $time if provided,
+	 * then POST time if available, otherwise use current time
+	 *
+	 * @param string $time
+	 *
+	 * @return string
+	 */
+	function get_year_month_day_directory_name( $time = null ) {
+		if ( ! $time && isset( $_POST['post_id'] ) ) {
+			$time = get_post_field( 'post_date', $_POST['post_id'] );
+		}
+
+		if ( ! $time ) {
+			$time = current_time( 'mysql' );
+		}
+
+		$y      = substr( $time, 0, 4 );
+		$m      = substr( $time, 5, 2 );
+		$d      = substr( $time, 8, 2 );
+		$subdir = "/$y/$m/$d";
 
 		if ( false === strpos( $subdir, '//' ) ) {
 			return $subdir;
@@ -3424,6 +3464,9 @@ class Amazon_S3_And_CloudFront extends AWS_Plugin_Base {
 		$output .= "\r\n";
 		$output .= 'Use Year/Month: ';
 		$output .= $this->on_off( 'use-yearmonth-folders' );
+		$output .= "\r\n";
+		$output .= 'Use Year/Month/Day: ';
+		$output .= $this->on_off( 'use-yearmonthday-folders' );
 		$output .= "\r\n";
 		$output .= 'Force HTTPS: ';
 		$output .= $this->on_off( 'force-https' );
